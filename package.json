@@ -17,8 +17,10 @@
 		"vite": "^8.0.16"
 	},
 	"dependencies": {
+		"@prisma/client": "^7.8.0",
 		"dotenv": "^17.4.2",
 		"node-fetch": "^3.3.2",
-		"pg": "^8.22.0"
+		"pg": "^8.22.0",
+		"prisma": "^7.8.0"
 	}
 }
