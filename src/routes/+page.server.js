@@ -1,4 +1,5 @@
 import { env } from '$env/dynamic/private';
+import { prisma } from '$lib/prisma'; // Imports your Prisma client to talk to Google Cloud
 
 export async function load() {
     const clientId = env.EBAY_CLIENT_ID;
@@ -41,14 +42,25 @@ export async function load() {
 
         console.log("✅ Successfully authenticated with eBay Sandbox!");
 
-        // 4. Temporary placeholder data to prevent frontend rendering crashes
-        const mockHoldings = [
-            { id: 1, name: "1952 Topps Mickey Mantle #311", type: "Baseball", grade: "PSA 8", market_price: 1500000 },
-            { id: 2, name: "1989 Upper Deck Ken Griffey Jr. #1", type: "Baseball", grade: "PSA 10", market_price: 2200 }
-        ];
+        // 4. LIVE DATABASE QUERY: Pull real cards from Google Cloud SQL
+        // If the database is empty, fallback to an empty array instead of crashing
+        const realHoldings = await prisma.card.findMany().catch((err) => {
+            console.error("❌ Database query failed:", err);
+            return [];
+        });
 
+        // Map database fields safely to your front-end layout names
+        const formattedHoldings = realHoldings.map(card => ({
+            id: card.id,
+            name: card.name,
+            type: card.type || "Baseball",
+            grade: card.grade,
+            market_price: card.market_price || 0 
+        }));
+
+        // If your database has no items yet, show a clean onboarding empty state 
         return {
-            holdings: mockHoldings,
+            holdings: formattedHoldings,
             error: null
         };
 
