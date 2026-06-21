@@ -1,11 +1,13 @@
 import { env } from '$env/dynamic/private';
-import { prisma } from '$lib/prisma'; // Imports your Prisma client to talk to Google Cloud
+import { PrismaClient } from '@prisma/client';
+
+// Initialize Prisma client directly inside this file to prevent import path errors
+const prisma = new PrismaClient();
 
 export async function load() {
     const clientId = env.EBAY_CLIENT_ID;
     const clientSecret = env.EBAY_CLIENT_SECRET;
 
-    // 1. Fallback / Safety checks
     if (!clientId || !clientSecret || clientId.includes("actual")) {
         return {
             holdings: [],
@@ -14,10 +16,8 @@ export async function load() {
     }
 
     try {
-        // 2. Encode credentials for OAuth basic auth
         const credentialsBase64 = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
-        // 3. Request application access token from eBay Sandbox
         const tokenResponse = await fetch('https://api.sandbox.ebay.com/identity/v1/oauth2/token', {
             method: 'POST',
             headers: {
@@ -42,14 +42,12 @@ export async function load() {
 
         console.log("✅ Successfully authenticated with eBay Sandbox!");
 
-        // 4. LIVE DATABASE QUERY: Pull real cards from Google Cloud SQL
-        // If the database is empty, fallback to an empty array instead of crashing
+        // Pull data directly using our initialized instance
         const realHoldings = await prisma.card.findMany().catch((err) => {
             console.error("❌ Database query failed:", err);
             return [];
         });
 
-        // Map database fields safely to your front-end layout names
         const formattedHoldings = realHoldings.map(card => ({
             id: card.id,
             name: card.name,
@@ -58,7 +56,6 @@ export async function load() {
             market_price: card.market_price || 0 
         }));
 
-        // If your database has no items yet, show a clean onboarding empty state 
         return {
             holdings: formattedHoldings,
             error: null
